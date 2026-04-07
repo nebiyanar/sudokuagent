@@ -157,6 +157,90 @@ def solve_sudoku_steps(grid, last_row: int = 0, last_col: int = 0):
     return False
 
 
+def get_candidates(grid, r: int, c: int):
+    if grid[r][c] != -1:
+        return []
+
+    candidates = []
+    for num in range(1, 10):
+        if is_valid(grid, num, r, c):
+            candidates.append(num)
+    return candidates
+
+
+def find_empty_cell_mrv(grid):
+    best_cell = None
+    best_candidates = None
+
+    for r in range(9):
+        for c in range(9):
+            if grid[r][c] == -1:
+                candidates = get_candidates(grid, r, c)
+
+                # Bu hucre icin hic aday yoksa dal hemen basarisiz.
+                if len(candidates) == 0:
+                    return (r, c), []
+
+                if best_cell is None or len(candidates) < len(best_candidates):
+                    best_cell = (r, c)
+                    best_candidates = candidates
+
+                    # MRV icin teorik en iyi deger 1 oldugundan erken cikabiliriz.
+                    if len(best_candidates) == 1:
+                        return best_cell, best_candidates
+
+    if best_cell is None:
+        return None, []
+
+    return best_cell, best_candidates
+
+
+def solve_sudoku_mrv(grid):
+    cell, candidates = find_empty_cell_mrv(grid)
+
+    if cell is None:
+        return True
+
+    r, c = cell
+    if len(candidates) == 0:
+        return False
+
+    for num in candidates:
+        grid[r][c] = num
+
+        if solve_sudoku_mrv(grid):
+            return True
+
+        grid[r][c] = -1
+
+    return False
+
+
+def solve_sudoku_steps_mrv(grid):
+    cell, candidates = find_empty_cell_mrv(grid)
+
+    if cell is None:
+        yield ("done", None, None, None)
+        return True
+
+    r, c = cell
+    if len(candidates) == 0:
+        return False
+
+    for num in candidates:
+        grid[r][c] = num
+        yield ("place", r, c, num)
+
+        solved = yield from solve_sudoku_steps_mrv(grid)
+        if solved:
+            return True
+
+        grid[r][c] = -1
+        yield ("remove", r, c, -1)
+
+    return False
+
+
 def print_grid(grid):
     for i in range(9):
         # Her 3 satırda bir araya yatay ayırıcı çizgi çek (en üst hariç)
